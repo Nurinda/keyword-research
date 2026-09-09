@@ -118,6 +118,23 @@ cepat dan simpel untuk versioning + auto-deploy dari GitHub.
 
 ---
 
+## Catatan soal model reasoning (GPT-5.x, o-series) & batas waktu Netlify
+
+Netlify Functions (paket gratis) punya batas eksekusi **10 detik** per request.
+Model reasoning seperti `gpt-5.5` secara default mikir dengan level
+"medium reasoning effort", yang kadang butuh waktu lebih dari itu — terutama
+kalau diminta generate banyak keyword sekaligus. Untuk mengatasi ini, function
+di project ini otomatis mengirim `reasoning_effort: "minimal"` khusus untuk
+model reasoning, supaya responsnya jauh lebih cepat.
+
+Kalau kamu tetap mengalami timeout:
+- Turunkan jumlah keyword yang di-generate per request (slider di form)
+- Atau ganti `OPENAI_MODEL` di Netlify ke model non-reasoning yang lebih
+  cepat seperti `gpt-4o-mini` atau `gpt-4.1-mini`
+- Kalau butuh tetap pakai model reasoning dengan banyak keyword, pertimbangkan
+  upgrade paket Netlify (Pro ke atas punya limit lebih longgar) atau pindah
+  ke arsitektur background function
+
 ## Menambahkan data volume asli (opsional)
 
 Kalau nanti mau naik level dari estimasi AI ke data volume pencarian yang

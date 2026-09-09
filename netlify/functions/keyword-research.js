@@ -123,6 +123,11 @@ Hasilkan campuran keyword head-term, mid-tail, dan long-tail (termasuk yang berb
     // Hanya kirim temperature custom kalau modelnya mendukung (bukan reasoning model).
     if (!isReasoningModel) {
       requestBody.temperature = 0.7;
+    } else {
+      // Model reasoning (gpt-5.x, o-series) defaultnya "medium" reasoning effort,
+      // yang bisa lebih lambat dari batas waktu eksekusi Netlify Functions (10 detik).
+      // "minimal" mempercepat respons drastis - cocok untuk tugas klasifikasi seperti ini.
+      requestBody.reasoning_effort = "minimal";
     }
 
     const response = await fetch(OPENAI_URL, {

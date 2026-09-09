@@ -79,7 +79,9 @@
       }
 
       if (!res.ok) {
-        const baseMsg = data.error || "Terjadi kesalahan saat memanggil API.";
+        const baseMsg =
+          data.error ||
+          `Function tidak merespons dengan format yang diharapkan (kemungkinan timeout - proses ke OpenAI lebih dari 10 detik). Status HTTP: ${res.status}.`;
         const detail = data.detail ? ` — Detail: ${truncate(data.detail, 300)}` : "";
         throw new Error(`${baseMsg}${detail}`);
       }
