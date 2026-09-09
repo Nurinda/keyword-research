@@ -70,7 +70,9 @@
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Terjadi kesalahan saat memanggil API.");
+        const baseMsg = data.error || "Terjadi kesalahan saat memanggil API.";
+        const detail = data.detail ? ` — Detail: ${truncate(data.detail, 300)}` : "";
+        throw new Error(`${baseMsg}${detail}`);
       }
 
       allKeywords = Array.isArray(data.keywords) ? data.keywords : [];
@@ -128,6 +130,11 @@
     a.remove();
     URL.revokeObjectURL(url);
   });
+
+  function truncate(str, max) {
+    const s = String(str);
+    return s.length > max ? s.slice(0, max) + "…" : s;
+  }
 
   function csvEscape(value) {
     const str = String(value);
