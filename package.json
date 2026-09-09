@@ -1,0 +1,13 @@
+{
+  "name": "keyword-genius",
+  "version": "1.0.0",
+  "description": "AI-powered keyword research tool (SEO vs GEO classification) using the OpenAI API, deployable on Netlify.",
+  "private": true,
+  "scripts": {
+    "dev": "netlify dev"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

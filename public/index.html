@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Keyword Genius — Riset Keyword SEO & GEO bertenaga AI</title>
+<meta name="description" content="Riset keyword AI yang memisahkan mana untuk SEO (traffic klik) dan mana untuk GEO (dikutip AI Overview, ChatGPT, Perplexity)." />
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar__inner">
+      <div class="brand">
+        <span class="brand__mark">KG</span>
+        <span class="brand__name">Keyword Genius</span>
+      </div>
+      <p class="topbar__tag">Riset keyword AI — dipilah untuk SEO & untuk GEO</p>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <section class="panel panel--form">
+      <h1 class="panel__title">Cari & klasifikasikan keyword</h1>
+      <p class="panel__desc">
+        Masukkan satu seed keyword. AI akan membuat variasi keyword lalu menilai
+        setiap keyword: cocok untuk <strong class="tag tag--seo">SEO</strong>
+        (traffic klik di SERP), <strong class="tag tag--geo">GEO</strong>
+        (dikutip AI Overview / ChatGPT / Perplexity), atau keduanya.
+      </p>
+
+      <form id="research-form">
+        <label class="field">
+          <span class="field__label">Seed keyword</span>
+          <input type="text" id="seedKeyword" placeholder="contoh: sepatu lari, cara investasi reksadana, jasa desain logo" required />
+        </label>
+
+        <div class="field-row">
+          <label class="field">
+            <span class="field__label">Target market</span>
+            <input type="text" id="market" value="Indonesia" />
+          </label>
+          <label class="field">
+            <span class="field__label">Bahasa</span>
+            <input type="text" id="language" value="Bahasa Indonesia" />
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field__label">Jumlah keyword: <span id="countValue">25</span></span>
+          <input type="range" id="count" min="5" max="60" value="25" />
+        </label>
+
+        <button type="submit" id="submitBtn" class="btn btn--primary">
+          Generate keyword
+        </button>
+
+        <p id="formError" class="form-error" hidden></p>
+      </form>
+
+      <div class="note">
+        <strong>Catatan jujur:</strong> kolom volume &amp; difficulty adalah
+        <em>estimasi tier</em> dari pola bahasa AI, bukan data pasti seperti
+        Ahrefs / Google Keyword Planner (AI tidak punya akses data search
+        volume real). Untuk angka pasti, hubungkan API data pihak ketiga
+        (lihat README).
+      </div>
+    </section>
+
+    <section class="panel panel--results">
+      <div class="results-toolbar">
+        <div class="filter-group">
+          <span class="filter-group__label">Channel</span>
+          <div class="segmented" id="channelFilter">
+            <button type="button" class="segmented__btn is-active" data-value="All">Semua</button>
+            <button type="button" class="segmented__btn" data-value="SEO">SEO</button>
+            <button type="button" class="segmented__btn" data-value="GEO">GEO</button>
+            <button type="button" class="segmented__btn" data-value="Both">Both</button>
+          </div>
+        </div>
+
+        <label class="field field--inline">
+          <span class="field__label">Intent</span>
+          <select id="intentFilter">
+            <option value="All">Semua intent</option>
+            <option value="Informational">Informational</option>
+            <option value="Commercial">Commercial</option>
+            <option value="Transactional">Transactional</option>
+            <option value="Navigational">Navigational</option>
+          </select>
+        </label>
+
+        <label class="field field--inline field--grow">
+          <span class="field__label">Cari</span>
+          <input type="text" id="searchBox" placeholder="cari di dalam hasil…" />
+        </label>
+
+        <button type="button" id="exportBtn" class="btn btn--ghost" disabled>
+          Export CSV
+        </button>
+      </div>
+
+      <div id="resultMeta" class="result-meta" hidden></div>
+
+      <div id="tableWrap" class="table-wrap">
+        <table id="resultsTable">
+          <thead>
+            <tr>
+              <th>Keyword</th>
+              <th>Cluster</th>
+              <th>Intent</th>
+              <th>Volume</th>
+              <th>Difficulty</th>
+              <th>SEO score</th>
+              <th>GEO score</th>
+              <th>Channel</th>
+              <th>Alasan</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+
+        <div id="emptyState" class="empty-state">
+          <p>Belum ada hasil. Isi form di sebelah kiri lalu klik <strong>Generate keyword</strong>.</p>
+        </div>
+
+        <div id="loadingState" class="loading-state" hidden>
+          <div class="spinner" aria-hidden="true"></div>
+          <p>AI sedang riset &amp; klasifikasi keyword…</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>Keyword Genius — dibangun dengan OpenAI API, di-deploy di Netlify.</p>
+  </footer>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>
