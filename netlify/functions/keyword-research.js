@@ -99,6 +99,10 @@ exports.handler = async (event) => {
 
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
+  // Model reasoning generasi baru (gpt-5*, o1*, o3*, o4*) hanya mendukung
+  // temperature default (1) dan menolak nilai custom seperti 0.7.
+  const isReasoningModel = /^(gpt-5|o1|o3|o4)/i.test(model);
+
   const userPrompt = `Seed keyword: "${seedKeyword}"
 Target market: ${market}
 Bahasa target: ${language}
@@ -107,21 +111,27 @@ Jumlah keyword yang harus dihasilkan: sekitar ${count} keyword (boleh sedikit le
 Hasilkan campuran keyword head-term, mid-tail, dan long-tail (termasuk yang berbentuk pertanyaan natural language yang berpotensi dijawab AI Overview/ChatGPT/Perplexity). Pastikan ada representasi keyword yang condong SEO, yang condong GEO, dan yang Both.`;
 
   try {
+    const requestBody = {
+      model,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+    };
+
+    // Hanya kirim temperature custom kalau modelnya mendukung (bukan reasoning model).
+    if (!isReasoningModel) {
+      requestBody.temperature = 0.7;
+    }
+
     const response = await fetch(OPENAI_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model,
-        temperature: 0.7,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userPrompt },
-        ],
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
