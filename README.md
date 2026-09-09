@@ -1,4 +1,4 @@
-# Keyword Genius
+# Keyword Research SEO & GEO
 
 Tool riset keyword bertenaga **OpenAI API** yang memisahkan keyword mana yang
 cocok untuk **SEO** (menarik traffic klik dari SERP tradisional) dan mana yang
@@ -74,7 +74,7 @@ kemungkinan error saat deploy.
    ```bash
    git init
    git add .
-   git commit -m "Initial commit: Keyword Genius"
+   git commit -m "Initial commit: Keyword Research SEO & GEO"
    git branch -M main
    git remote add origin https://github.com/USERNAME/keyword-genius.git
    git push -u origin main
