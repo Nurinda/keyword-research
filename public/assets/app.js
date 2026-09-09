@@ -46,6 +46,8 @@
   intentFilter.addEventListener("change", renderTable);
   searchBox.addEventListener("input", renderTable);
 
+  const BATCH_SIZE = 20; // aman di bawah batas waktu Netlify Functions (10 detik)
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     formError.hidden = true;
@@ -53,53 +55,109 @@
     const seedKeyword = seedInput.value.trim();
     if (!seedKeyword) return;
 
-    setLoading(true);
+    const market = marketInput.value.trim() || "Indonesia";
+    const language = languageInput.value.trim() || "Bahasa Indonesia";
+    const totalCount = parseInt(countInput.value, 10);
+
+    const batches = [];
+    let remaining = totalCount;
+    while (remaining > 0) {
+      const size = Math.min(BATCH_SIZE, remaining);
+      batches.push(size);
+      remaining -= size;
+    }
+
+    setLoading(true, batches.length > 1 ? `Batch 1 dari ${batches.length}…` : null);
+
+    const collected = [];
+    let modelUsed = null;
 
     try {
-      const res = await fetch("/.netlify/functions/keyword-research", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          seedKeyword,
-          market: marketInput.value.trim() || "Indonesia",
-          language: languageInput.value.trim() || "Bahasa Indonesia",
-          count: parseInt(countInput.value, 10),
-        }),
-      });
+      for (let i = 0; i < batches.length; i++) {
+        if (batches.length > 1) {
+          setLoadingProgress(`Menghasilkan batch ${i + 1} dari ${batches.length}…`);
+        }
 
-      const rawBody = await res.text();
-      let data;
-      try {
-        data = JSON.parse(rawBody);
-      } catch (parseErr) {
-        throw new Error(
-          `Server tidak mengembalikan JSON (kemungkinan function tidak ditemukan atau crash). ` +
-            `Status HTTP: ${res.status}. Cuplikan respons: ${truncate(rawBody, 200)}`
-        );
+        const res = await fetch("/.netlify/functions/keyword-research", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            seedKeyword,
+            market,
+            language,
+            count: batches[i],
+            excludeKeywords: collected.map((k) => k.keyword).filter(Boolean),
+          }),
+        });
+
+        const rawBody = await res.text();
+        let data;
+        try {
+          data = JSON.parse(rawBody);
+        } catch (parseErr) {
+          throw new Error(
+            `Server tidak mengembalikan JSON pada batch ${i + 1} (kemungkinan timeout). ` +
+              `Status HTTP: ${res.status}. Cuplikan respons: ${truncate(rawBody, 200)}`
+          );
+        }
+
+        if (!res.ok) {
+          const baseMsg =
+            data.error ||
+            `Batch ${i + 1} gagal - kemungkinan timeout (proses ke OpenAI lebih dari 10 detik). Status HTTP: ${res.status}.`;
+          const detail = data.detail ? ` — Detail: ${truncate(data.detail, 300)}` : "";
+          throw new Error(`${baseMsg}${detail}`);
+        }
+
+        const batchKeywords = Array.isArray(data.keywords) ? data.keywords : [];
+        collected.push(...batchKeywords);
+        modelUsed = data.model;
       }
 
-      if (!res.ok) {
-        const baseMsg =
-          data.error ||
-          `Function tidak merespons dengan format yang diharapkan (kemungkinan timeout - proses ke OpenAI lebih dari 10 detik). Status HTTP: ${res.status}.`;
-        const detail = data.detail ? ` — Detail: ${truncate(data.detail, 300)}` : "";
-        throw new Error(`${baseMsg}${detail}`);
-      }
-
-      allKeywords = Array.isArray(data.keywords) ? data.keywords : [];
-      lastResponseMeta = data;
+      allKeywords = dedupeByKeyword(collected);
+      lastResponseMeta = {
+        seedKeyword,
+        model: modelUsed,
+        generatedAt: new Date().toISOString(),
+        count: allKeywords.length,
+      };
       renderTable();
       renderMeta();
       exportBtn.disabled = allKeywords.length === 0;
     } catch (err) {
       formError.textContent = err.message || "Gagal mengambil data. Coba lagi.";
       formError.hidden = false;
-      allKeywords = [];
-      renderTable();
+      if (collected.length) {
+        // Tetap tampilkan hasil parsial dari batch yang berhasil sebelum error
+        allKeywords = dedupeByKeyword(collected);
+        renderTable();
+        exportBtn.disabled = allKeywords.length === 0;
+      } else {
+        allKeywords = [];
+        renderTable();
+      }
     } finally {
       setLoading(false);
     }
   });
+
+  function dedupeByKeyword(list) {
+    const seen = new Set();
+    const out = [];
+    list.forEach((kw) => {
+      const key = String(kw.keyword || "").trim().toLowerCase();
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        out.push(kw);
+      }
+    });
+    return out;
+  }
+
+  function setLoadingProgress(text) {
+    const p = loadingState.querySelector("p");
+    if (p) p.textContent = text;
+  }
 
   exportBtn.addEventListener("click", () => {
     const rows = getFilteredKeywords();
@@ -155,13 +213,14 @@
     return str;
   }
 
-  function setLoading(isLoading) {
+  function setLoading(isLoading, progressText) {
     submitBtn.disabled = isLoading;
     submitBtn.textContent = isLoading ? "Menghasilkan…" : "Generate keyword";
     loadingState.hidden = !isLoading;
     if (isLoading) {
       emptyState.hidden = true;
       resultsBody.innerHTML = "";
+      setLoadingProgress(progressText || "AI sedang riset & klasifikasi keyword…");
     }
   }
 

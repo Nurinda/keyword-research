@@ -88,6 +88,9 @@ exports.handler = async (event) => {
   const market = (payload.market || "Indonesia").trim();
   const language = (payload.language || "Bahasa Indonesia").trim();
   const count = Math.min(Math.max(parseInt(payload.count, 10) || 25, 5), 60);
+  const excludeKeywords = Array.isArray(payload.excludeKeywords)
+    ? payload.excludeKeywords.filter((k) => typeof k === "string").slice(0, 200)
+    : [];
 
   if (!seedKeyword) {
     return {
@@ -108,7 +111,13 @@ Target market: ${market}
 Bahasa target: ${language}
 Jumlah keyword yang harus dihasilkan: sekitar ${count} keyword (boleh sedikit lebih/kurang).
 
-Hasilkan campuran keyword head-term, mid-tail, dan long-tail (termasuk yang berbentuk pertanyaan natural language yang berpotensi dijawab AI Overview/ChatGPT/Perplexity). Pastikan ada representasi keyword yang condong SEO, yang condong GEO, dan yang Both.`;
+Hasilkan campuran keyword head-term, mid-tail, dan long-tail (termasuk yang berbentuk pertanyaan natural language yang berpotensi dijawab AI Overview/ChatGPT/Perplexity). Pastikan ada representasi keyword yang condong SEO, yang condong GEO, dan yang Both.${
+    excludeKeywords.length
+      ? `\n\nPENTING: JANGAN hasilkan keyword yang sama atau sangat mirip dengan daftar berikut, karena sudah dihasilkan sebelumnya:\n${excludeKeywords
+          .map((k) => `- ${k}`)
+          .join("\n")}`
+      : ""
+  }`;
 
   try {
     const requestBody = {
