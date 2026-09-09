@@ -56,7 +56,7 @@
     setLoading(true);
 
     try {
-      const res = await fetch("/api/keyword-research", {
+      const res = await fetch("/.netlify/functions/keyword-research", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -67,7 +67,16 @@
         }),
       });
 
-      const data = await res.json();
+      const rawBody = await res.text();
+      let data;
+      try {
+        data = JSON.parse(rawBody);
+      } catch (parseErr) {
+        throw new Error(
+          `Server tidak mengembalikan JSON (kemungkinan function tidak ditemukan atau crash). ` +
+            `Status HTTP: ${res.status}. Cuplikan respons: ${truncate(rawBody, 200)}`
+        );
+      }
 
       if (!res.ok) {
         const baseMsg = data.error || "Terjadi kesalahan saat memanggil API.";
