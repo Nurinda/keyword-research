@@ -126,11 +126,15 @@ Hasilkan campuran keyword head-term, mid-tail, dan long-tail (termasuk yang berb
 
     if (!response.ok) {
       const errText = await response.text();
+      console.error(
+        `OpenAI API error — status ${response.status}, model "${model}":`,
+        errText
+      );
       return {
         statusCode: response.status,
         headers,
         body: JSON.stringify({
-          error: "OpenAI API mengembalikan error.",
+          error: `OpenAI API mengembalikan error (HTTP ${response.status}).`,
           detail: errText,
         }),
       };
@@ -171,6 +175,7 @@ Hasilkan campuran keyword head-term, mid-tail, dan long-tail (termasuk yang berb
       }),
     };
   } catch (err) {
+    console.error("Unexpected error in keyword-research function:", err);
     return {
       statusCode: 500,
       headers,
