@@ -135,11 +135,13 @@ Hasilkan campuran keyword head-term, mid-tail, dan long-tail (termasuk yang berb
     } else {
       // Model reasoning (gpt-5.x, o-series) defaultnya "medium" reasoning effort,
       // yang bisa lebih lambat dari batas waktu eksekusi Netlify Functions (10 detik).
-      // "minimal" mempercepat respons drastis - cocok untuk tugas klasifikasi seperti ini.
-      requestBody.reasoning_effort = "minimal";
+      // "low" mempercepat respons - cocok untuk tugas klasifikasi seperti ini.
+      // Nilai yang didukung berbeda-beda tiap model (mis. gpt-5.5: none/low/medium/high/xhigh),
+      // jadi ini bisa di-override lewat env var OPENAI_REASONING_EFFORT kalau perlu.
+      requestBody.reasoning_effort = process.env.OPENAI_REASONING_EFFORT || "low";
     }
 
-    const response = await fetch(OPENAI_URL, {
+    let response = await fetch(OPENAI_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -147,6 +149,37 @@ Hasilkan campuran keyword head-term, mid-tail, dan long-tail (termasuk yang berb
       },
       body: JSON.stringify(requestBody),
     });
+
+    // Auto-retry: kalau OpenAI menolak nilai parameter tertentu (mis. model
+    // baru yang tidak mendukung reasoning_effort/temperature seperti yang kita kirim),
+    // buang parameter itu dan coba sekali lagi, alih-alih langsung gagal ke user.
+    if (!response.ok) {
+      const cloned = response.clone();
+      let errJson = null;
+      try {
+        errJson = await cloned.json();
+      } catch (_) {
+        // bukan JSON, biarkan alur error normal di bawah yang menangani
+      }
+
+      const badParam = errJson?.error?.param;
+      const isUnsupportedValue = errJson?.error?.code === "unsupported_value";
+
+      if (isUnsupportedValue && badParam && requestBody[badParam] !== undefined) {
+        console.error(
+          `Parameter "${badParam}" ditolak model "${model}", mencoba ulang tanpa parameter ini.`
+        );
+        delete requestBody[badParam];
+        response = await fetch(OPENAI_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify(requestBody),
+        });
+      }
+    }
 
     if (!response.ok) {
       const errText = await response.text();
