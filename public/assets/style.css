@@ -137,6 +137,10 @@ textarea.field, .field textarea {
   .layout { grid-template-columns: 1fr; }
 }
 
+.layout[hidden] {
+  display: none;
+}
+
 .panel {
   background: var(--paper-raised);
   border: 1px solid var(--line);
