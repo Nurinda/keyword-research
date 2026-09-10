@@ -19,7 +19,13 @@
     </div>
   </header>
 
-  <main class="layout">
+  <nav class="tabs" id="mainTabs">
+    <button type="button" class="tabs__btn is-active" data-tab="keyword-ai">Riset Keyword AI</button>
+    <button type="button" class="tabs__btn" data-tab="google-trends">Google Trends</button>
+    <button type="button" class="tabs__btn" data-tab="ai-citation">Cek AI Citation</button>
+  </nav>
+
+  <main class="layout" id="tab-keyword-ai" data-tab-page="keyword-ai">
 
     <section class="panel panel--form">
       <h1 class="panel__title">Cari & klasifikasikan keyword</h1>
@@ -136,10 +142,153 @@
 
   </main>
 
+  <main class="layout" id="tab-google-trends" data-tab-page="google-trends" hidden>
+    <section class="panel panel--form">
+      <h1 class="panel__title">Riset keyword dari Google Trends</h1>
+      <p class="panel__desc">
+        Masukkan satu keyword. Sistem mengambil data <strong>asli</strong> dari
+        Google Trends: indeks minat dari waktu ke waktu, plus related queries
+        yang sedang <strong class="tag tag--geo">naik (Rising)</strong> atau
+        paling populer <strong class="tag tag--seo">(Top)</strong> — cocok
+        untuk menemukan ide keyword yang sedang tren.
+      </p>
+
+      <form id="trends-form">
+        <label class="field">
+          <span class="field__label">Keyword</span>
+          <input type="text" id="trendsKeyword" placeholder="contoh: sepatu lari, resep nasi goreng" required />
+        </label>
+
+        <div class="field-row">
+          <label class="field">
+            <span class="field__label">Geo (kode negara)</span>
+            <input type="text" id="trendsGeo" value="ID" />
+          </label>
+          <label class="field">
+            <span class="field__label">Rentang waktu</span>
+            <select id="trendsTimeframe">
+              <option value="today 1-m">1 bulan terakhir</option>
+              <option value="today 3-m">3 bulan terakhir</option>
+              <option value="today 12-m" selected>12 bulan terakhir</option>
+              <option value="today 5-y">5 tahun terakhir</option>
+            </select>
+          </label>
+        </div>
+
+        <button type="submit" id="trendsSubmitBtn" class="btn btn--primary">
+          Cek Trends
+        </button>
+
+        <p id="trendsFormError" class="form-error" hidden></p>
+      </form>
+
+      <div class="note">
+        <strong>Butuh API:</strong> fitur ini pakai <strong>SerpApi Google
+        Trends API</strong>. Tambahkan environment variable
+        <code>SERPAPI_KEY</code> di Netlify. Detail lengkap & cara daftar ada
+        di README bagian "Fitur: Riset Keyword dari Google Trends".
+      </div>
+    </section>
+
+    <section class="panel panel--results">
+      <div id="trendsSummary" class="result-meta" hidden></div>
+      <div class="table-wrap">
+        <table id="trendsTable">
+          <thead>
+            <tr>
+              <th>Keyword</th>
+              <th>Tipe</th>
+              <th>Pertumbuhan</th>
+              <th>Link Google Trends</th>
+            </tr>
+          </thead>
+          <tbody id="trendsBody"></tbody>
+        </table>
+
+        <div id="trendsEmptyState" class="empty-state">
+          <p>Belum ada hasil. Isi form di sebelah kiri lalu klik <strong>Cek Trends</strong>.</p>
+        </div>
+
+        <div id="trendsLoadingState" class="loading-state" hidden>
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Mengambil data dari Google Trends…</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <main class="layout" id="tab-ai-citation" data-tab-page="ai-citation" hidden>
+    <section class="panel panel--form">
+      <h1 class="panel__title">Cek AI Citation</h1>
+      <p class="panel__desc">
+        Masukkan URL halaman kamu dan daftar keyword/pertanyaan yang mau
+        dicek. Sistem memeriksa apakah URL kamu dikutip di
+        <strong class="tag tag--geo">Google AI Overview</strong>, Perplexity,
+        dan hasil web search ChatGPT (OpenAI) untuk tiap keyword.
+      </p>
+
+      <form id="cite-form">
+        <label class="field">
+          <span class="field__label">URL</span>
+          <input type="url" id="citeUrl" placeholder="https://domainmu.com/artikel" required />
+        </label>
+
+        <label class="field">
+          <span class="field__label">Keyword / prompt (satu per baris)</span>
+          <textarea id="citeKeywords" rows="6" placeholder="cara investasi reksadana untuk pemula&#10;apa itu reksadana&#10;reksadana vs saham mending mana" required></textarea>
+        </label>
+
+        <button type="submit" id="citeSubmitBtn" class="btn btn--primary">
+          Cek Sitasi AI
+        </button>
+
+        <p id="citeFormError" class="form-error" hidden></p>
+      </form>
+
+      <div class="note">
+        <strong>Butuh API:</strong> Google AI Overview lewat <strong>SerpApi</strong>
+        (<code>SERPAPI_KEY</code>, sama seperti tab Google Trends), <strong>Perplexity
+        API</strong> (<code>PERPLEXITY_API_KEY</code>, opsional), dan ChatGPT
+        lewat <code>OPENAI_API_KEY</code> yang sudah ada (opsional,
+        hasilnya adalah approksimasi — bukan data resmi dari ChatGPT app).
+        Detail lengkap ada di README bagian "Fitur: Cek AI Citation".
+      </div>
+    </section>
+
+    <section class="panel panel--results">
+      <div id="citeSummary" class="result-meta" hidden></div>
+      <div class="table-wrap">
+        <table id="citeTable">
+          <thead>
+            <tr>
+              <th>Keyword / prompt</th>
+              <th>Google AI Overview</th>
+              <th>Perplexity</th>
+              <th>ChatGPT (approksimasi)</th>
+            </tr>
+          </thead>
+          <tbody id="citeBody"></tbody>
+        </table>
+
+        <div id="citeEmptyState" class="empty-state">
+          <p>Belum ada hasil. Isi form di sebelah kiri lalu klik <strong>Cek Sitasi AI</strong>.</p>
+        </div>
+
+        <div id="citeLoadingState" class="loading-state" hidden>
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Mengecek sitasi AI…</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
   <footer class="footer">
     <p>Keyword Research SEO & GEO. powered by NRM</p>
   </footer>
 
   <script src="assets/app.js"></script>
+  <script src="assets/tabs.js"></script>
+  <script src="assets/trends.js"></script>
+  <script src="assets/citation.js"></script>
 </body>
 </html>

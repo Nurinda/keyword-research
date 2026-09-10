@@ -35,13 +35,18 @@ Kalau kamu butuh angka volume pencarian yang akurat, lihat bagian
 keyword-genius/
 ├── netlify/
 │   └── functions/
-│       └── keyword-research.js   # Serverless function, panggil OpenAI API
+│       ├── keyword-research.js       # Tab 1: AI keyword research (OpenAI)
+│       ├── google-trends.js          # Tab 2: Google Trends (SerpApi)
+│       └── ai-citation-checker.js    # Tab 3: Cek AI Citation (SerpApi + Perplexity + OpenAI)
 ├── public/
-│   ├── index.html                 # UI utama
+│   ├── index.html                    # UI - 3 tab
 │   └── assets/
 │       ├── style.css
-│       └── app.js
-├── netlify.toml                   # Konfigurasi Netlify (redirect /api/* -> functions)
+│       ├── app.js                    # Logic tab 1 (tidak diubah saat tab baru ditambahkan)
+│       ├── tabs.js                   # Logic switch tab
+│       ├── trends.js                 # Logic tab 2
+│       └── citation.js               # Logic tab 3
+├── netlify.toml                      # Konfigurasi Netlify (redirect /api/* -> functions)
 ├── package.json
 ├── .env.example
 └── README.md
@@ -134,6 +139,88 @@ Kalau kamu tetap mengalami timeout:
 - Kalau butuh tetap pakai model reasoning dengan banyak keyword, pertimbangkan
   upgrade paket Netlify (Pro ke atas punya limit lebih longgar) atau pindah
   ke arsitektur background function
+
+## Fitur: Riset Keyword dari Google Trends (tab terpisah)
+
+Tab ini **berbeda total** dari tab "Riset Keyword AI" — di sini datanya
+**asli dari Google Trends**, bukan estimasi AI.
+
+**API yang dibutuhkan: [SerpApi](https://serpapi.com/) — Google Trends API**
+
+Kenapa SerpApi? Google **tidak** menyediakan API resmi publik untuk Google
+Trends. SerpApi adalah layanan pihak ketiga yang paling banyak dipakai untuk
+ini secara legal (mereka handle sisi scraping/parsing-nya), dengan hasil JSON
+yang rapi dan terdokumentasi resmi.
+
+**Cara setup:**
+1. Daftar di [serpapi.com/users/sign_up](https://serpapi.com/users/sign_up) (ada free trial credits)
+2. Ambil API key dari dashboard
+3. Tambahkan environment variable di Netlify: `SERPAPI_KEY`
+
+**Endpoint yang dipakai function ini:**
+- `GET https://serpapi.com/search.json?engine=google_trends&data_type=TIMESERIES&q=<keyword>&geo=<geo>&date=<timeframe>&api_key=<key>` — data minat dari waktu ke waktu
+- `GET https://serpapi.com/search.json?engine=google_trends&data_type=RELATED_QUERIES&q=<keyword>&geo=<geo>&date=<timeframe>&api_key=<key>` — ide keyword terkait (Top & Rising)
+
+Dokumentasi resmi: [serpapi.com/google-trends-api](https://serpapi.com/google-trends-api)
+
+**Catatan:** angka "minat" dari Google Trends adalah indeks relatif 0-100
+(terhadap titik tertinggi di rentang waktu itu), **bukan** angka volume
+pencarian absolut seperti di Ahrefs/Keyword Planner.
+
+---
+
+## Fitur: Cek AI Citation (tab terpisah)
+
+Tab ini mengecek apakah sebuah **URL** kamu dikutip (di-cite) oleh AI untuk
+sekumpulan keyword/prompt yang kamu masukkan — dicek ke 3 sumber berbeda:
+
+### 1. Google AI Overview
+**API:** SerpApi (key sama dengan fitur Google Trends: `SERPAPI_KEY`)
+
+Alurnya 2 langkah (sesuai cara kerja SerpApi untuk AI Overview):
+1. `GET https://serpapi.com/search.json?engine=google&q=<keyword>&api_key=<key>` — search normal, cek apakah ada field `ai_overview` di hasilnya
+2. Kalau `ai_overview.page_token` ada (kontennya belum lengkap), lanjut fetch:
+   `GET https://serpapi.com/search.json?engine=google_ai_overview&page_token=<token>&api_key=<key>` — `page_token` ini **hanya valid ±4 menit**, jadi harus langsung dipakai
+
+Dokumentasi resmi: [serpapi.com/google-ai-overview-api](https://serpapi.com/google-ai-overview-api)
+
+### 2. Perplexity
+**API:** [Perplexity Sonar API](https://docs.perplexity.ai/) (resmi dari Perplexity)
+
+**Cara setup:**
+1. Daftar & ambil API key di [perplexity.ai/settings/api](https://www.perplexity.ai/settings/api)
+2. Tambahkan environment variable di Netlify: `PERPLEXITY_API_KEY` (opsional — kalau kosong, kolom Perplexity akan menampilkan "Belum bisa dicek")
+
+Endpoint: `POST https://api.perplexity.ai/chat/completions` dengan model `sonar`. Respons Perplexity sudah menyertakan field `citations` (daftar URL sumber) yang kita cocokkan dengan URL kamu.
+
+**Batasan jujur:** urutan/isi sitasi di Sonar API bisa berbeda dari yang
+tampil di aplikasi Perplexity konsumen (beberapa riset independen menemukan
+overlap-nya tidak 100%). Anggap ini sebagai *sinyal indikatif*, bukan data
+pasti 1:1 dengan yang dilihat pengguna Perplexity.
+
+### 3. ChatGPT (approksimasi)
+**API:** OpenAI Responses API — pakai `OPENAI_API_KEY` yang **sudah ada**
+(tidak perlu key baru), dengan `OPENAI_MODEL_CHATGPT_CHECK` opsional (default
+`gpt-4o-mini`, dipilih karena cepat & murah untuk sekadar cek sitasi).
+
+Endpoint: `POST https://api.openai.com/v1/responses` dengan
+`tools: [{ "type": "web_search_preview" }]`. Sitasi muncul sebagai
+`url_citation` annotations di teks jawaban.
+
+**Batasan penting:** **Tidak ada API resmi** untuk membaca histori sitasi
+ChatGPT versi konsumen (chatgpt.com). Pengecekan ini pakai model OpenAI yang
+sama, dengan browsing web live, sebagai **pendekatan/approksimasi** —
+bukan data langsung dari aplikasi ChatGPT yang dipakai orang lain.
+
+### Batasan umum fitur ini (berlaku untuk ketiga sumber)
+- Ini adalah **citation probe real-time**, bukan data historis/analytics.
+  AI generatif menjawab ulang setiap kali diminta, jadi hasilnya bisa
+  berbeda dari pengecekan ke pengecekan berikutnya (ini sifat alami AI,
+  bukan bug) — sebaiknya cek berkala untuk melihat pola, bukan sekali saja.
+- Setiap keyword yang dicek memanggil sampai 3 API berbayar sekaligus.
+  Jaga jumlah keyword tetap wajar (di bawah ~20) supaya biaya & waktu proses
+  terkendali. Frontend otomatis membagi jadi batch kecil (3 keyword per
+  request) untuk menghindari timeout Netlify.
 
 ## Menambahkan data volume asli (opsional)
 
